@@ -6,6 +6,21 @@ are not ordered in the way I'd expect, and I wasn't aware of
 wrote this fast version (I'm not sure how the `more_itertools`
 version compares but I doubt it does poorly).
 
+- This code was posted [on StackOverflow](https://stackoverflow.com/a/62521582/2668831)
+
+The `more_itertools.powerset` function is listed in the `itertools` [recipes
+page](https://docs.python.org/3/library/itertools.html#itertools-recipes):
+
+```py
+def powerset(iterable):
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+```
+
+- The use of `r` indicates the size of the subset and the lower part of a binomial
+  coefficient (the upper part is usually "n" rather than `s` as here). Most calculators
+  have “n Choose r”.
+
 This code is equivalent to the program I wrote and much simpler, therefore
 I recommend that instead:
 
