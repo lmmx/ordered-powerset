@@ -264,3 +264,77 @@ BitStream('0b0110111001011101111000')
 The last two lines are two ways to calculate the length (`functools.reduce` only
 returns the last value, `itertools.accumulate` yields all intermediate values,
 i.e. all substring positions for the binary-encoded integers in our range).
+
+```sh
+python string_powerset.py 123 | sed "/^$/d" | tr '\n' ',' | tr -d ' ' | sed 's/,$/\n/'
+```
+⇣
+```STDOUT
+1,2,3,12,23,13,123
+```
+
+We can then use this ordered powerset to obtain the Gray code for 3 items (`n=3`)
+
+```py
+>>> bs = bitstream_ins('1,2,3,12,23,13,123')
+# BitStream('0x6e5de26af37be11')
+>>> bs.bin
+'011011100101110111100010011010101111001101111011111000010001'
+```
+
+This is fairly long, and can be shortened by "lencoding"
+- (not sure what its proper name is, but I doubt I've invented anything new here)
+
+I.e. rather than using the set of codewords `{0,1}⁺` (ITILA p.92) so that `range(6)`
+is represented by the bitstrings `{0,1,10,11,100,101}`, the first `n` bitstrings
+from the union of the sets of codewords `⋃ { {0,1}ⁱ }` for all `i ∊ range(n)`
+
+- Here `n` = 3 (the number of items in the identity set `{1,2,3}`, and `range(n)`
+  is the [0-based] integer range `{0,1,2}` which in binary codewords _with_ lencoding
+  becomes `{0,1,00}`
+
+The obvious consequence is that unlike the `{0,1}⁺` codewords, the lencoded codewords
+(let's call them `{0,1}⁺⁺` for now to suggest incrementation upon `{0,1}⁺`) repeat
+binary values (but importantly, never with the same length bitstring), meaning that
+for all but the first two bitstrings `{0,1}`, the binary value is lower than the
+decoded integer value.
+
+The offset of the lencoded binary value from its 'real' (decoded) integer value is
+obtained as `2^(⌊log₂(3+2)⌋)-2` from the function `bitstr_lencoded_value_offset`
+for the 0-based decoded integer value.
+
+```py
+bs_lossless = bitstream_ins(n=6)
+bs_lencode = bitstream_ins(n=6, lencode=True)
+bs_fixedlen = bitstream_ins(n=6, fixed_length=True)
+
+print("Lossless:    ", bs_lossless.bin)
+print("Lencoded:    ", bs_lencode.bin)
+print("Fixed length:", bs_fixedlen.bin)
+```
+⇣
+```STDOUT
+Lossless:     011011100101
+Lencoded:     0100011011
+Fixed length: 000001010011100101
+```
+
+- To split those out into their codeword sets:
+
+```
+Lossless:      011011100101        =  {0,1,10,11,100,101}
+Lencoded:      0100011011          =  {0,1,00,01,10,11}
+Fixed length:  000001010011100101  =  {000,001,010,011,100,101}
+```
+
+- `TODO`: obtain these codeword sets by a function that iterates over the range
+  and obtains split positions according to the `lenfunc(b)` for each `b` in the
+  bit range
+
+The remaining step is to not only output a range, or to count iterables and output
+the range of the iterable's length (so as to count the items in the iterable), but
+also to output only some within a range, and to begin to think about obtaining a
+Gray code for the combinations in the order we want (comparing this order to the
+'lexicographic' order we are able to get with the range).
+
+_TBC..._
