@@ -426,16 +426,38 @@ Note that this is **not** simply the binary integer you get from
 1,2,3,4.12,23,34,13,24,14.123,234,124,134.1234
 ```
 
-- Call these the binary integers, _𝕫𝕓_
-- In this order `{1, 10, 11, 100, ...}` call them _ρ(𝕫𝕓)_
+- Call these the 'binary integers', _𝕫𝕓_ (top line) and call their 'integer'
+  form _𝕫_
+- In this order call them _ρ(𝕫)_ and _ρ(𝕫𝕓)_
+- Observe that whichever form it's in, the _integer values_ (note: not the permutations)
+  are descending at some points: i.e. if you were to compare them to a lexicographically sorted list
+  of the same integers you would say that there is a 'descent'
+  - e.g. _ρ(𝕫)_ contains `{34,13}` whereas a lexicographically sorted list would not be in this order
+    (in fact there would be intervening values: the sequence would be `{13, ..., 34}`)
 
 What I want to know is: given (either of the 3 equivalent representations of) the
 **generation order** (_ρ_) of the permutations _π_ (of _n_ items, here `n=4`) without descents
-[PWDs], how to generate _ρ_ from the lexicographic sort order of the same set of PWDs (_σ_)?
+[PWDs], how to generate _ρ_ from the lexicographic sort order (_σ_) of the same set of PWDs _π_?
 
 - In case that looks complex, it's really just asking: what's the relation between the two
   permutations _ρ_ and _σ_?
   - It just looks a little more complicated as they are both composed of (the same set of)
-    'sub'-permutations (_π_)
+    'sub'-permutations (_π_), which we are representing as integers when we write _𝕫_ (e.g. `34`).
 
-It'll clarify the question somewhat to spell it out.
+It'll clarify the question somewhat to spell this out in more detail.
+
+Notice that I mentioned **3 forms** of the permutation order we are calling rho: but so far I only
+introduced _ρ(𝕫)_ and _ρ(𝕫𝕓)_.
+
+The third form is _ρ(𝕓)_, which is the binary 'toggle' and is the far more 'natural' (again, as in
+amenable) way to represent these PWDs: if the PWD contains an item, we toggle it.
+
+The standard way I learnt to write a binary digit (and textbooks vary on this convention) is the one
+that makes them look most like a polynomial, with coefficients in descending order left to right.
+
+For `n=4`, this means for a binary codeword of length 4,
+
+> 𝕓₄ = 𝔹₃𝔹₂𝔹₁𝔹₀
+
+The 'bit toggle' generation order (henceforth _ρ(𝕓)_) can be derived from the integer generation
+order _ρ(𝕫)_ as a polynomial (and vice versa for that matter).
