@@ -276,14 +276,18 @@ python string_powerset.py 123 | sed "/^$/d" | tr '\n' ',' | tr -d ' ' | sed 's/,
 We can then use this ordered powerset to obtain the Gray code for 3 items (`n=3`)
 
 ```py
->>> bs = bitstream_ins('1,2,3,12,23,13,123')
-# BitStream('0x6e5de26af37be11')
+>>> bs = bitstream_ins([1,2,3,12,23,13,123])
+BitStream('0b1101111001011111011111011')
 >>> bs.bin
-'011011100101110111100010011010101111001101111011111000010001'
+'1101111001011111011111011'
 ```
 
 This is fairly long, and can be shortened by "lencoding"
 - (not sure what its proper name is, but I doubt I've invented anything new here)
+
+```py
+>>> bs = 
+```
 
 I.e. rather than using the set of codewords `{0,1}⁺` (ITILA p.92) so that `range(6)`
 is represented by the bitstrings `{0,1,10,11,100,101}`, the first `n` bitstrings
@@ -337,4 +341,101 @@ also to output only some within a range, and to begin to think about obtaining a
 Gray code for the combinations in the order we want (comparing this order to the
 'lexicographic' order we are able to get with the range).
 
-_TBC..._
+In other words, we want an iterator which is not a `range_iterator`. We'll come back to this.
+
+---
+
+Earlier we determined the sequence to be reproduced, which we can print again with
+the newlines removed and the blank lines replaced by `.`
+
+```sh
+python string_powerset.py 1234 | sed -e 's/^$/./g' | tr '\n' ',' | sed 's/,.,/./g' | tr -d ' '
+```
+⇣
+```STDOUT
+1,2,3,4.12,23,34,13,24,14.123,234,124,134.1234
+```
+
+It's pretty clear that we should be looking at this in binary, which is now possible by
+passing these numbers to `bitstream_ins` (removing the `.` which was to show change of bitstring
+length):
+
+- I've now turned this into a package rather than scripts, so run with `python -im ord_pset`
+  (to run interactively) or `import ord_pset` in a program in the top-level directory of this repo
+  to reproduce
+  - E.g. for the following, run `python print_combs_gen_code.py`
+    - Side note: I went away and wrote the [mdblocks](https://github.com/lmmx/mdblocks)
+      utility to make these output blocks at this point!
+    - E.g. the one below came from `pybtickblock print_combs_gen_code.py`
+    - To reproduce without `mdblocks` functions, just run as `python` and ignore any flags
+
+```py
+from ord_pset import bit_strings
+
+gen = [[1,2,3,4],[12,23,34,13,24,14],[123,234,124,134],[1234]]
+print(gen, end="\n⇣\n")
+
+bs = bit_strings.BitStream()
+split_bs = []
+individual_bit_levels = []
+
+for g in gen:
+    bit_strings.bitstream_ins(g, bstream=bs)
+    split_bs.append(bit_strings.bitstream_ins(g))
+    individual_bitstrings = []
+    for v in g:
+        b = bit_strings.bitstream_ins([v])
+        individual_bitstrings.append(b.bin)
+    jb = ",".join(individual_bitstrings)
+    individual_bit_levels.append(jb)
+
+print(bs.bin)
+print(".".join(individual_bit_levels))
+
+jib = "".join(individual_bit_levels).replace(",","")
+assert(jib == bs.bin), ValueError(
+    "The individual bitstrings don't concatenate into the bitstream")
+print("Concatenating the individual bitstrings matches the bitstream")
+```
+⇣
+```STDOUT
+[[1, 2, 3, 4], [12, 23, 34, 13, 24, 14], [123, 234, 124, 134], [1234]]
+⇣
+11011100110010111100010110111000111011110111110101011111001000011010011010010
+1,10,11,100.1100,10111,100010,1101,11000,1110.1111011,11101010,1111100,10000110.10011010010
+Concatenating the individual bitstrings matches the bitstream
+```
+
+Which gives us the binary encoded equivalent to the integer representation of the powerset.
+It's pretty obvious however that natural numbers aren't the 'natural' (as in, most amenable)
+way to represent combinations in a powerset.
+
+What the combinations of a powerset really are, are a sequence of permutations of the subsets,
+specifically the permutations without descents (as mentioned above). The way to represent
+permutations is as a 'bit toggle'. So now we want to encode these numbers as binary digits
+in a different way: as a boolean/bit toggle of the 4 positions (but for any `n`).
+
+Note that this is **not** simply the binary integer you get from 
+
+- `pybtickblock --nofilecat print_combs_gen_bin_to_pos.py`
+
+```STDOUT
+[['1', '10', '11', '100'], ['1100', '10111', '100010', '1101', '11000', '1110'], ['1111011',
+'11101010', '1111100', '10000110'], ['10011010010']]
+⇣
+1,2,3,4.12,23,34,13,24,14.123,234,124,134.1234
+```
+
+- Call these the binary integers, _𝕫𝕓_
+- In this order `{1, 10, 11, 100, ...}` call them _ρ(𝕫𝕓)_
+
+What I want to know is: given (either of the 3 equivalent representations of) the
+**generation order** (_ρ_) of the permutations _π_ (of _n_ items, here `n=4`) without descents
+[PWDs], how to generate _ρ_ from the lexicographic sort order of the same set of PWDs (_σ_)?
+
+- In case that looks complex, it's really just asking: what's the relation between the two
+  permutations _ρ_ and _σ_?
+  - It just looks a little more complicated as they are both composed of (the same set of)
+    'sub'-permutations (_π_)
+
+It'll clarify the question somewhat to spell it out.

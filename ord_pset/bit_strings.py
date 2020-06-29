@@ -1,18 +1,14 @@
 from bitstring import Bits, BitStream, pack
 from math import ceil, floor, log2 #, frexp
+from more_itertools import all_equal
 
 def bitstr_len(n):
     """
     Return the maximal length bitstring in `range(n)`, i.e. the length of the
     binary bitstring of `n-1`, which is the final term in `range(n)`.
-    # ----
-    # TODO: Refactor the control flow logic on top of this function using `math.frexp`
-    # ----
-    This can probably be refactored so that it is being used to modify a cached value
-    based on testing the mantissa from `math.frexp` (to be > 0) rather than this lazy
-    approach of reassigning every time based on an entirely calculated `ceil`'d log2.
     """
-    return max(1, ceil(log2(n+1)))
+    #return max(1, ceil(log2(n+1)))
+    return max(1, n.bit_length())
 
 def bitstr_len_lencoded(n):
     """
@@ -26,15 +22,9 @@ def bitstr_len_lencoded(n):
     as integers, e.g. the lencoded integers 0 and 2 are `0` and `00` which are
     numerically equal in value, but not in bitstring length: `ƒ(0)=1`, `ƒ(2)=2`
     (ƒ is the function calculated by this funcdef `⌈log₂(n+3)⌉-1`).
-
-    # ----
-    # TODO: Refactor the control flow logic on top of this function using `math.frexp`
-    # ----
-    This can probably be refactored so that it is being used to modify a cached value
-    based on testing the mantissa from `math.frexp` (to be > 0) rather than this lazy
-    approach of reassigning every time based on an entirely calculated `ceil`'d log2.
     """
-    return ceil(log2(n+3))-1
+    # return ceil(log2(n+3))-1
+    return (n+2).bit_length()-1
 
 def bitstr_lencoded_value_offset(n):
     """
@@ -54,14 +44,24 @@ def bitstr_lencoded_value_offset(n):
     """
     # equivalent to `2**floor(log2(n+2))-2` but bit_length is a native int method
     # see https://stackoverflow.com/a/28033134/2668831
-    return 2**( (n+2).bit_length() - 1 ) - 2
+    return 2**(bitstr_len_lencoded(n)) - 2
 
-def bitstream_ins(iterable=None, n=None, fixed_length=False, lencode=False, v=False):
+def bitstream_ins(iterable=None, n=None, bstream=None, fixed_length=False, lencode=False, v=False):
     """
     Return a BitStream representation of `iterable` by repeated insertions.
+    `iterable` should be an iterable of integers, such as from `range(n)`.
+    
+      `bitstream_ins(range(0)).bin` --> `""`
+      `bitstream_ins(range(1)).bin` --> `"0"`
+      `bitstream_ins(range(2)).bin` --> `"01"`
+
+    If `iterable` is not provided (or provided as `None`), `n` must be instead,
+    and `iterable` will be created as `range(n)`. Providing both `iterable` and
+    `n` will raise a `ValueError`.
 
     All bitstrings are of the same length when `fixed_length` is True, or
-    else will be only as long as needed (i.e. no left zero padding) if False.
+    else will be only as long as needed (i.e. no left zero padding) if False
+    (default: False).
 
     If `fixed_length` is False and `lencode` is True, the bitstream will be
     further compressed by encoding the same value at different lengths
@@ -81,44 +81,84 @@ def bitstream_ins(iterable=None, n=None, fixed_length=False, lencode=False, v=Fa
     if n is None:
         assert not iterable is None, ValueError("Must provide iterable or n")
         n = len(iterable)
+        assert all_equal(map(type, iterable)), TypeError("iterable of mixed types")
+        if n > 0:
+            msg = "Not an iterable of `int`s: omit & provide `n=len(iterable)` instead"
+            assert isinstance(iterable[0], int), TypeError(msg)
     else:
         assert isinstance(n, int), TypeError("n must be an integer")
+        assert not n < 0, ValueError("n cannot be negative")
+    if n == 0:
+        # void iterator from 0-length `iterable` or `n=0` always gives empty bitstring
+        return BitStream() # BitStream("").bin is BitStream().bin
     lenfunc = bitstr_len_lencoded if lencode else bitstr_len
     if fixed_length:
-        if n > 2:
-            max_l = lenfunc(n-1)
+        if iterable is None:
+            if n > 2:
+                max_l = lenfunc(n-1)
+            else:
+                max_l = 1
         else:
-            max_l = 1
-    bit_range = range(n)
+            # Can't see how to check maximum value needed for max_l other than iterating
+            max_val = max(iterable)
+    bit_seq = range(n) if iterable is None else iterable
     if v:
-        print(f"Creating stream on {bit_range}")
-    bstream = BitStream()
+        print(f"Initialising stream on {bit_seq}")
+    if bstream is None:
+        bstream = BitStream()
+    assert isinstance(bstream, BitStream), TypeError("bstream ≠ bitstring⠶BitStream")
     if fixed_length:
-        for b in bit_range:
+        for b in bit_seq: # `range(n)` or `iterable`
             if v:
                 print(f"Inserting {b} at length {max_l}")
             insert_into_bitstream(bstream, b, max_l)
     else:
         if lencode:
-            bit_length_counter = bin_readout_offset = 0 # initialise counts
-            for b in bit_range:
-                if b > 1:
-                    l2bp2 = (b+2).bit_length()-1 # l2bp2 means "log2 b plus 2"
-                    if l2bp2 > bit_length_counter: # b = 2,6,14,30,...
-                        bit_length_counter = l2bp2
-                        bin_readout_offset = 2**bit_length_counter - 2
-                    # (the rest) b = 3,4,5, 7,...,13, 15...29, 31,...
-                    l = lenfunc(b) # assign l based on 'true' (decoded) value
-                    # decoded value minus offset = encoded value
-                    b -= bin_readout_offset # reassign rather than making
-                else: # (b < 2) are not modified by 'lencoding'
-                    # fall thru without counter++ or `b -= bin_readout_offset`
-                    l = lenfunc(b)
-                if v:
-                    print(f"Inserting {b} at length {l}")
-                insert_into_bitstream(bstream, b, l)
+            if iterable is None:
+                bit_length_counter = bin_readout_offset = 0 # initialise counts
+                for b in bit_seq: # `range(n)`
+                    if b > 1:
+                        ###l2bp2 = (b+2).bit_length()-1 # l2bp2 means "log2 b plus 2"
+                        l2bp2 = bitstr_len_lencoded(b)
+                        if l2bp2 > bit_length_counter: # b = 2,6,14,30,...
+                            bit_length_counter = l2bp2
+                            bin_readout_offset = 2**bit_length_counter - 2
+                        # (the rest) b = 3,4,5, 7,...,13, 15...29, 31,...
+                        l = lenfunc(b) # assign l based on 'true' (decoded) value
+                        # decoded value minus offset = encoded value
+                        b -= bin_readout_offset # reassign rather than making
+                    else: # (b < 2) are not modified by 'lencoding'
+                        # fall thru without counter++ or `b -= bin_readout_offset`
+                        l = lenfunc(b)
+                    if v:
+                        print(f"Inserting {b} at length {l}")
+                    insert_into_bitstream(bstream, b, l)
+            else:
+                bit_length_counter = bin_readout_offset = 0 # initialise counts
+                for b in bit_seq: # `range(n)`
+                    if b > 1:
+                        # no mantissa, int(log2(b+2)) via stackoverflow.com/a/28033134/
+                        # log2(b+2)-1 gives the count of the run of `l`-length codewords
+                        # or equivalently the power of the Mersenne prime max. codeword
+                        # length `l`, e.g. 2^(3)-1 = 7, 7 is the max. lencoded codeword
+                        # length `l=3` (i.e. in binary 7 is `111`).
+                        ###l2bp2 = (b+2).bit_length()-1 # l2bp2 means "log2 b plus 2"
+                        l2bp2 = bitstr_len_lencoded(b)
+                        if l2bp2 > bit_length_counter: # b = 2,6,14,30,...
+                            bit_length_counter = l2bp2
+                            bin_readout_offset = 2**bit_length_counter - 2
+                        # (the rest) b = 3,4,5, 7,...,13, 15...29, 31,...
+                        l = lenfunc(b) # assign l based on 'true' (decoded) value
+                        # decoded value minus offset = encoded value
+                        b -= bin_readout_offset # reassign rather than making
+                    else: # (b < 2) are not modified by 'lencoding'
+                        # fall thru without counter++ or `b -= bin_readout_offset`
+                        l = lenfunc(b)
+                    if v:
+                        print(f"Inserting {b} at length {l}")
+                    insert_into_bitstream(bstream, b, l)
         else:
-            for b in bit_range:
+            for b in bit_seq: # `range(n)` or `iterable`
                 l = lenfunc(b)
                 if v:
                     print(f"Inserting {b} at length {l}")
