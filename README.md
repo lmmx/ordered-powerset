@@ -452,7 +452,7 @@ introduced _ρ(𝕫)_ and _ρ(𝕫𝕓)_.
 The third form is _ρ(𝕓)_, which is the binary 'toggle' and is the far more 'natural' (again, as in
 amenable) way to represent these PWDs: if the PWD contains an item, we toggle it.
 
-The standard way I learnt to write a binary digit (and textbooks vary on this convention) is the one
+The standard way I learnt to write binary (and textbooks vary on this convention) is the one
 that makes them look most like a polynomial, with coefficients in descending order left to right.
 
 For `n=4`, this means for a binary codeword of length 4,
@@ -461,3 +461,195 @@ For `n=4`, this means for a binary codeword of length 4,
 
 The 'bit toggle' generation order (henceforth _ρ(𝕓)_) can be derived from the integer generation
 order _ρ(𝕫)_ as a polynomial (and vice versa for that matter).
+
+This is visible, but recall that what we want to obtain is something like a Gray code (or some other
+Reed-Muller code), which will allow us to generate the combinations from a single iterator,
+and therefore allow us to keep fewer integers in memory (as explained already).
+
+Recall the module `string_powerset.py` which takes a quoted string of any set of elements and
+returns their combinations, which we earlier used to obtain all combinations of '1234'. We can
+use the function it imports `generate_powerset` from the `pset_partitions` module, or
+be lazy and just interactively jump into the shell after running `string_powerset` where we
+will have access to the variable `ps`, as the source code shows:
+
+```py
+from pset_partitions import generate_powerset, string_handler
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("items_str", action="append", help="A string to" +
+    "be split as multiple items, or multiple space-separated strings, " +
+    "representing the set of items whose powerset is to be determined")
+parser.add_argument("-q", "--quiet", dest="verbose", action="store_false")
+args = parser.parse_args()
+
+items = list(args.items_str)
+
+if len(items) == 1:
+    items = list(items[0])
+
+ps = generate_powerset(items, subset_handler=string_handler, verbose=args.verbose)
+```
+
+So running `python -i string_powerset.py '1234'`, we can copy the array with which
+to get a look at our final generation order, _ρ(𝕓)_:
+
+```py
+1, 2, 3, 4
+
+12, 23, 34
+13, 24
+14
+
+123, 234
+124
+134
+
+1234
+>>> ps
+{0: ['', '1', '2', '3', '4'], 1: ['12', '23', '34', '13', '24', '14'], 2: ['123', '234', '124',
+'134'], 3: ['1234']}
+>>> list(ps.values())
+[['', '1', '2', '3', '4'], ['12', '23', '34', '13', '24', '14'], ['123', '234', '124', '134'],
+['1234']]
+```
+
+Again note that we will discard the empty string as a special case, and use these in the variable
+`gen` to get the binary toggle bitstrings
+
+- `pybtickblock --nofilecat print_combs_gen_pos_to_bintoggle.py`
+
+```STDOUT
+[['1', '2', '3', '4'], ['12', '23', '34', '13', '24', '14'], ['123', '234', '124', '134'], ['1234']]
+⇣
+100001000010000111000110001110100101100111100111110110111111
+1000,0100,0010,0001.1100,0110,0011,1010,0101,1001.1110,0111,1101,1011.1111
+Concatenating the individual bitstrings matches the bitstream
+```
+
+So now it's quite clear (I'd hope) that viewing the sequence as binary makes the earlier
+distance interpretation very apparent.
+
+We can first see the progression in terms of the sum of the binary digits, i.e. the count of nonzero
+bits (as delimited by `.` in the bitstream above):
+
+- Sum 1: `1000,0100,0010,0001`
+- Sum 2: `1100,0110,0011,1010,0101,1001`
+- Sum 3: `1110,0111,1101,1011`
+- Sum 4: `1111`
+
+But further than this, we can see the distances between nonzero bits:
+
+- Sum 1:
+  - d = `(0)`: `1000,0100,0010,0001`
+- Sum 2:
+  - d = `(1)`: `1100,0110,0011`
+  - d = `(2)`: `1010,0101`
+  - d = `(3)`: `1001`
+- Sum 3:
+  - d = `(1,1)`: `1110,0111`
+  - d = `(1,2)`: `1101`
+  - d = `(2,1)`: `1011` **!!!**
+- Sum 4:
+  - d = `(1,1,1)`: `1111`
+
+There's one interesting line here – the non-unit distance sum-3 distances are sorted as `{(1,2), (2,1)}`!
+
+This means that we know from this example alone (from this single pair of distance tuples `(1,2)`
+and `(2,1)`) that not only are the sums and total distance ascending for this sequence _ρ(𝕓)_,
+we can actually see these permutations of `d` are in ascending order of distances when their sum is the same.
+
+To put this another way, we don't pay any attention to the fact that these values appear to be "anti-lexicographically
+sorted" (lexicographically reverse order), i.e. the binary strings when the sum of distances between
+nonzero bits is the same seem to 'decrease'. Lexicographically, `1011` looks like it should be less
+than `1101`, as surely `134` < `124`, no?
+
+Recall however that we're not truly looking at binary integers here, but binary toggles: the
+("lossless") binary for 124 is `1111100` [7 digits] and 134 is `10000110` [8 digits].
+
+But these aren't what we're looking at, and this is why it's actually unhelpful to keep referring to
+what are actually permutations (PWDs, _π_) as if they were ordinal numbers (natural numbers).
+
+Having said that, perhaps we could consider making the distance counts binary too:
+
+- Sum 1:
+  - d = `(0)`: `1000,0100,0010,0001`
+- Sum 2:
+  - d = `(1)`: `1100,0110,0011`
+  - d = `(10)`: `1010,0101`
+  - d = `(11)`: `1001`
+- Sum 3:
+  - d = `(1,1)`: `1110,0111`
+  - d = `(1,10)`: `1101`
+  - d = `(10,1)`: `1011` **!!!**
+- Sum 4:
+  - d = `(1,1,1)`: `1111`
+
+After doing that, if we then 'merge' these binary distance counts into a single label...
+
+- Sum 1:
+  - d = `(0)`: `1000,0100,0010,0001`
+- Sum 2:
+  - d = `(1)`: `1100,0110,0011`
+  - d = `(10)`: `1010,0101`
+  - d = `(11)`: `1001`
+- Sum 3:
+  - d = `(11)`: `1110,0111`
+  - d = `(110)`: `1101`
+  - d = `(101)`: `1011` **!!!**
+- Sum 4:
+  - d = `(111)`: `1111`
+
+Now what we observe are two things:
+
+- Repetitions:
+  - d = `(11)`: `1001`
+  - d = `(11)`: `1110,0111`
+- Descending order binary integers:
+  - d = `(110)`: `1101`
+  - d = `(101)`: `1011` **!!!**
+
+For the repetitions, since we know that they can't have been formed from the same binary distance tuples
+(since each of these occurs only once in the sequence), then they must have been formed by the
+merging of smaller binary numbers (and thus we can always rely on any repetitions being 'greater
+than' the earlier one, and we know that if we've seen it before then it must have been merged from a
+greater number of distances than the preceding).
+
+- E.g. `11` was a sum 2 distance tuple which was followed by something which appears to be another
+  `11`, but since this is impossible then it can only be `1,1`. So in fact, we don't even need to
+  keep track of the length (i.e. we can omit the lines which count the sum of the nonzero binary digits).
+  - Let's drop that `d` while we're at it
+
+**Abridged generation line format**
+
+```
+0:    1000,0100,0010,0001
+1:    1100,0110,0011
+10:   1010,0101
+11:   1001
+11:   1110,0111
+110:  1101
+101:  1011
+111:  1111
+```
+
+Next, the descending order binary integers. All that can be said of them is that they only occur within
+the same length
+
+- `(110)`: `1101`
+- `(101)`: `1011` **!!!**
+
+or
+
+- `(110)`: `1101`
+- `(101)`: `1011` **!!!**
+
+So really then, what we have so far thought of as `n`-length sequences can really be
+characterised in terms of their distances  which are binary bitstrings of lengths in the range
+`[1,n)` (i.e. `[1,n-1]` but it's neater to write in standard range notation and matches Python).
+
+Lastly, we should also note that on the lines as we've written them out, the binary numbers are all
+actually in descending order. This is equivalent to stating the positions should be "filled" in
+ascending order, however since we'll be working in binary let's set our convention as "descending
+[binary] order" for binary permutations of identical "distance tuple" (i.e. not across lines which
+share the distance bitstring, since we know they 'really' came from different distance tuples).
