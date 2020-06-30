@@ -285,10 +285,6 @@ BitStream('0b1101111001011111011111011')
 This is fairly long, and can be shortened by "lencoding"
 - (not sure what its proper name is, but I doubt I've invented anything new here)
 
-```py
->>> bs = 
-```
-
 I.e. rather than using the set of codewords `{0,1}⁺` (ITILA p.92) so that `range(6)`
 is represented by the bitstrings `{0,1,10,11,100,101}`, the first `n` bitstrings
 from the union of the sets of codewords `⋃ { {0,1}ⁱ }` for all `i ∊ range(n)`
@@ -653,3 +649,299 @@ actually in descending order. This is equivalent to stating the positions should
 ascending order, however since we'll be working in binary let's set our convention as "descending
 [binary] order" for binary permutations of identical "distance tuple" (i.e. not across lines which
 share the distance bitstring, since we know they 'really' came from different distance tuples).
+
+In terms of forming a unique sequence then, we will need to distinguish these equivalent generating
+distance tuples which we have now "merged" into a single bitstring and as such "repeat" in some way.
+
+The way to do so is to left-pad the larger ones with zeroes: in standard binary this is the same
+number, but **in our "lencoded" bitstrings these are distinct values**.
+
+Recall how we counted with them (here for the six values `{0,1,2,3,4,5,6}`):
+
+```
+Lossless:      011011100101        =  {0,1,10,11,100,101}
+Lencoded:      0100011011          =  {0,1,00,01,10,11}
+Fixed length:  000001010011100101  =  {000,001,010,011,100,101}
+```
+
+So far though, I only obtained the lencoded bitstrings through a `range` (sequence) object in
+Python, not for arbitrary values. This is unhelpful for determining the values of `11` and `011`
+right now: however it suggests that **if we can determine the maximum distance-tuple (mDT) then we can
+also determine its merged bitstring (mDTMB) and the range of lencoded values up to the MDMB
+will give a single iterator.**
+
+This is great, as it'll mean that we can derive a Gray code (a unit Hamming distance code) whereas
+so far the codes we've seen have been about non-monotonic distances
+
+E.g. on the example above (before we converted the distance tuples to binary) we had:
+
+- Sum 2:
+  - ...
+  - d = `(3)`: `1001`
+- Sum 3:
+  - d = `(1,1)`: `1110,0111`
+
+...in which the distance-tuple `(3)` decreased to `(1,1)` and we had to resort to saying that
+we were ordering them according to the length of their tuple not the values inside them, which
+of course works but is unsatisfying in terms of number progressions.
+
+Note that this was 'fixed' when we switched to DTMBs (Distance Tuple Merged Bitstrings), and
+here I'll omit the switch from sum-2 to sum-3 for brevity:
+
+- d = `(11)`: `1001`
+- d = `(1,1)`: `1110,0111`
+---
+- d = `(11)`: `1001`
+- d = `(11)`: `1110,0111`
+
+...but the 'fix' came at the cost of "repeating" identical [DTMB] bitstrings, `11` and `11`.
+
+If we now go through and lencode these repeated DTMBs so that they're the same length as the sums, then
+we will actually justify our earlier decision to throw away the sum values (which recall, were not
+for the DTMBs but the binary bitstrings length `n=4` on the right of each DTMB).
+
+- Sum 1:
+  - d = `(0)`: `1000,0100,0010,0001`
+- Sum 2:
+  - d = `(1)`: `1100,0110,0011`
+  - d = `(10)`: `1010,0101`
+  - d = `(11)`: `1001`
+- Sum 3:
+  - d = `(011)`: `1110,0111`
+  - d = `(110)`: `1101`
+  - d = `(101)`: `1011` **!!!**
+- Sum 4:
+  - d = `(111)`: `1111`
+
+Note that we have an ambiguity: we don't seem to need to lencode the tuple `(1)` as it's not a
+repeat. So this rule does not apply to all values: in fact it only doesn't apply to the first
+DTMB in the case of `n=4`. We'll look at a higher `n` next to check if this holds.
+
+**Somewhat De-Abridged generation line format**
+
+```
+0:    1000,0100,0010,0001
+1:    1100,0110,0011
+10:   1010,0101
+11:   1001
+011:  1110,0111
+110:  1101
+101:  1011
+111:  1111
+```
+
+Now that we've established a unique binary sequence of distance labels (we'll simply call them
+_d_ again now that we now they're Distance Tuple Merged Bitstrings, DTMBs), we can decode them
+as lencoded numbers.
+
+If we go ahead and load `python -im ord_pset` and recall `help(bit_strings.bitstream_ins)`:
+
+```py
+bitstream_ins(iterable=None, n=None, bstream=None, fixed_length=False, lencode=False, v=False)
+    Return a BitStream representation of `iterable` by repeated insertions.
+    `iterable` should be an iterable of integers, such as from `range(n)`.
+    
+      `bitstream_ins(range(0)).bin` --> `""`
+      `bitstream_ins(range(1)).bin` --> `"0"`
+      `bitstream_ins(range(2)).bin` --> `"01"`
+    
+    If `iterable` is not provided (or provided as `None`), `n` must be instead,
+    and `iterable` will be created as `range(n)`. Providing both `iterable` and
+    `n` will raise a `ValueError`.
+    
+    All bitstrings are of the same length when `fixed_length` is True, or
+    else will be only as long as needed (i.e. no left zero padding) if False
+    (default: False).
+    
+    If `fixed_length` is False and `lencode` is True, the bitstream will be
+    further compressed by encoding the same value at different lengths
+    
+    `range(6)` bitstrings if `fixed_length`: `{0,1,10,11,100,101}`
+     --> bitstream: '0110111000101', length = 13
+    `range(6)` bitstrings if `fixed_length` & `lencode`: `{0,1,00,01,10,11}`
+     --> bitstream: '0100011011', length = 10
+    
+    Must provide a uniquely decodable bitstream: cannot reuse codewords for different
+    symbols ∴ `lencode` is forbidden unless `fixed_length` is False.
+    
+    Print progress information on the range being created and individual insertions
+    (integer, length) if the verbosity parameter `v` is True.
+```
+
+We now satisfy the following requirement:
+
+> **Must provide a uniquely decodable bitstream: cannot reuse codewords** for different
+> symbols ∴ `lencode` is forbidden unless `fixed_length` is False.
+
+```py
+max_n = 8
+for n in range(max_n):
+    print(bit_strings.bitstream_ins(n=n, lencode=True).bin)
+```
+⇣
+```STDOUT
+0
+01
+0100
+010001
+01000110
+0100011011
+0100011011000
+```
+
+Does this match our bitstream?
+
+- These are the row labels before the colon in the _"Somewhat De-Abridged generation line format"_
+  above, placed in a Python list
+
+```py
+gen_bitstrings = ['0', '1', '10', '11', '011', '110', '101', '111']
+print("".join(gen_bitstrings))
+```
+⇣
+```STDOUT
+011011011110101111
+```
+
+- Lencoded bitstream up to `n=8` terms:
+  - `0100011011000`
+- Our generating sequence bitstream:
+  - `011011011110101111`
+
+No, clearly not: in fact the sequence we generate from `bitstream_ins(n=8, lencode=True)`
+is much more compact. But surely we have some terms from it: let's quickly check what those are.
+
+```py
+max_n = 8
+seen_bitlen_count = 0
+for n in range(max_n):
+    bs = bit_strings.bitstream_ins(n=n, lencode=True).bin
+    new_bitstring = bs[seen_bitlen_count:]
+    seen_bitlen_count += len(new_bitstring)
+    print(new_bitstring, f"({n})")
+```
+⇣
+```STDOUT
+ (0)
+0 (1)
+1 (2)
+00 (3)
+01 (4)
+10 (5)
+11 (6)
+000 (7)
+```
+
+- Notice the empty string is our 'zero': we will use this but for now we are counting with
+  these bitstrings so we will skip this and consider our ranges starting at `n=1`.
+
+Now compare these 7 non-empty bitstrings to our sequence:
+
+```py
+gen_bitstrings = ['0', '1', '10', '11', '011', '110', '101', '111']
+print("\n".join(f"{b} ({i+1})" for i, b in enumerate(gen_bitstrings)))
+```
+⇣
+```STDOUT
+0 (1)
+1 (2)
+10 (3)
+11 (4)
+011 (5)
+110 (6)
+101 (7)
+111 (8)
+```
+
+The first difference is that our generation sequence cannot contain runs of zeroes
+after the first bitstring `0`
+
+- else we would see `00` after `1` (not `10`) and `000` after `11` (not `011`).
+
+Again let's not rewrite any code yet, and just add 2 to the range we iterate over
+(to account for the two bitstrings with runs of multiple zeroes (and nothing else)
+
+- i.e. we just found that we need to skip the two values `00` and `000` so we need to
+  make up for their loss by increasing the range of values we take `n` up to
+
+```py
+max_n = 8
+zero_run_offset = 2
+zero_offset_count = 0
+seen_bitlen_count = 0
+for n in range(1, max_n + zero_run_offset):
+    bs = bit_strings.bitstream_ins(n=n, lencode=True).bin
+    new_bitstring = bs[seen_bitlen_count:]
+    seen_bitlen_count += len(new_bitstring)
+    if len(new_bitstring) > 1 and '1' not in new_bitstring:
+        zero_offset_count += 1
+        continue
+    print(new_bitstring, f"({n - zero_offset_count})")
+```
+⇣
+```STDOUT
+0 (1)
+1 (2)
+01 (3)
+10 (4)
+11 (5)
+001 (6)
+010 (7)
+```
+
+The next difference is that we shouldn't have:
+- `01 (3)` we should skip it to get `10 (3)`
+- `001 (6)` we should skip it, and skip `010` then take `011 (5)`
+  - The index is decremented to 5 since we already skipped `01`
+
+...and if we take these out in our loop...
+
+
+...so we get there in the end, but it's pretty clear that **this sequence
+is not 'lencoded'**. To say more precisely what this sequence is, let's
+restate what 'lencoded' really means.
+
+Recall we earlier mentioned that we could consider the lencoded binary integers as:
+
+> the union of the sets of codewords `⋃ { {0,1}ⁱ }` for all `i ∊ range(n)`
+
+'Lencoded' binary is a way of counting in binary that conjoins (or concatenates)
+successive fixed length codes, and **must** use every codeword within those codes.
+
+> `⋃ { {0,1}ⁱ }`
+
+`{0,1}⁺⁺` should therefore really have an indicator of its maximum codeword length,
+_n_, perhaps written as `{0,1}⁺⁺ⁿ` as a working notation, because our earlier
+notation was ambiguous: if we wanted to go up to _n_ then we'd need to set `i = n+1`
+(as the `range` is zero-based, so `range(n)` only gives you `{0,...,n-1}`).
+
+When we obtained the output of `bitstream_ins(n=8, lencoded=True)`, the successive
+fixed length codes which made it up were the length 0, length 1, length 2, and
+length 3 codes. The largest codeword length was 3, so we'll call it `{0,1}⁺⁺³`.
+
+In our new notation:
+
+`{0,1}⁺⁺ⁿ` = `⋃ { {0,1}ⁱ }` for all `i ∊ range(1, n+1)`
+
+- ...or `range(0,n+1)` if we want to include the empty bitstring as the singleton element of the
+  zero-length codewords: but for now our convention will omit this and we will work with positive
+  integer length bitstrings.
+
+So to return to our attempt to recreate the 7 bitstrings from `0` to `111`, with a maximum length of
+3 and therefore `n=3`, the new notation is to write the lencoded binary sequence as:
+
+`{0,1}⁺⁺³`
+
+- = `⋃ { {0,1}ⁱ }` for all `i ∊ range(1, n+1)`
+- = `⋃ { {0,1}¹, {0,1}², {0,1}³ }`
+- = `⋃ { {0,1}, {00,...,11}, {000,...,111} }`
+- = `⋃ { {0,1}, {00,...,11}, {000,...,111} }`
+
+so it's the union (concatenation) of:
+
+- (`{0,1}⁰` but we're not considering this by convention)
+- `{0,1}¹`
+- `{0,1}²`
+- `{0,1}³`
+
+(TBC)
