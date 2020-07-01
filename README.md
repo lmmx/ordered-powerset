@@ -896,6 +896,7 @@ The next difference is that we shouldn't have:
 
 ...and if we take these out in our loop...
 
+- `TODO`
 
 ...so we get there in the end, but it's pretty clear that **this sequence
 is not 'lencoded'**. To say more precisely what this sequence is, let's
@@ -944,4 +945,116 @@ so it's the union (concatenation) of:
 - `{0,1}²`
 - `{0,1}³`
 
-(TBC)
+Another way to look at the sequence is to write its "complement" (flipping every bit) alongside, on
+the right of the previous two columns:
+
+```
+0 (1) 1
+1 (2) 0
+01 (3) 10
+10 (4) 01
+11 (5) 00
+001 (6) 110
+010 (7) 101
+```
+
+When we do so, it appears that maybe we should actually consider it as 'counting down', and the relation between lines as something
+to do with flipping an individual bit. So on the 1st-2nd rows we flip the first bit, then to go to
+the 3rd row we can't flip `0` as it'd regress to the 1st row, so we add another bit (i.e. advance to
+the next codeword length)
+
+- We don't start at `11` because we need to flip a single bit
+  - so by this logic, the bit we add is at the end of the word (`0` gets flipped to `1` and then
+    right-padded with a `0` to give `10`)
+- We flip both as to flip just one would give us `00` or `11`
+  - let's say that there is a rule that the new value must be a smaller binary number, so we can't
+    choose `11` as it's a larger binary number than `10`
+  - let's say that there is a rule that the new value must have a different value to the preceding
+    value, so we can't choose `00` as that has the same 'readout' value (i.e. sum) of zero as the
+    preceding line (`0` at line 2)
+
+Perhaps there is some rule we can define in this way. We should look for this with the larger set of
+bitstrings for `n=6`.
+
+To gauge the pattern more clearly, let's build back up to 6 items (as at the start with `abcdef`):
+
+```sh
+python string_powerset.py 123456 | sed -e 's/^$/./g' | tr '\n' ',' | sed 's/,.,/./g' | tr -d ' '
+```
+⇣
+```STDOUT
+1,2,3,4,5,6.12,23,34,45,56,13,24,35,46,14,25,36,15,26,16.123,234,345,456,124,235,346,134,245,356,125,236,145,256,135,246,126,156,136,146.1234,2345,3456,1235,2346,1245,2356,1345,2456,1236,1256,1456,1246,1346,1356.12345,23456,12346,12356,12456,13456.123456,
+```
+
+...this gets too long, let's leave in the empty lines between the bit lengths
+
+```sh
+python string_powerset.py 123456 | sed -e 's/^$/./g' | tr '\n' ',' | sed 's/,.,/./g' | tr -d ' ' | tr '.' '\n'
+```
+⇣
+```STDOUT
+1,2,3,4,5,6
+12,23,34,45,56,13,24,35,46,14,25,36,15,26,16
+123,234,345,456,124,235,346,134,245,356,125,236,145,256,135,246,126,156,136,146
+1234,2345,3456,1235,2346,1245,2356,1345,2456,1236,1256,1456,1246,1346,1356
+12345,23456,12346,12356,12456,13456
+123456,
+```
+
+With some minimal editing, the script to generate the binary toggle for `n=4` now gives us the
+binary toggles for these numbers:
+
+- `pybtickblock --nofilecat print_combs_gen_pos_to_bintoggle.py`
+
+```STDOUT
+[['1', '2', '3', '4', '5', '6'], ['12', '23', '34', '45', '56', '13', '24', '35', '46', '14', '25',
+'36', '15', '26', '16'], ['123', '234', '345', '456', '124', '235', '346', '134', '245', '356',
+'125', '236', '145', '256', '135', '246', '126', '156', '136', '146'], ['1234', '2345', '3456',
+'1235', '2346', '1245', '2356', '1345', '2456', '1236', '1256', '1456', '1246', '1346', '1356'],
+['12345', '23456', '12346', '12356', '12456', '13456'], ['123456']]
+⇣
+100000010000001000000100000010000001110000011000001100000110000011101000010100001010000101100100010010001001100010010001100001111000011100001110000111110100011010001101101100010110001011110010011001100110010011101010010101110001100011101001100101111100011110001111111010011101110110011011101110010111111001110011100111110101101101101011111110011111111101111011110111101111111111
+100000,010000,001000,000100,000010,000001.110000,011000,001100,000110,000011,101000,010100,001010,000101,100100,010010,001001,100010,010001,100001.111000,011100,001110,000111,110100,011010,001101,101100,010110,001011,110010,011001,100110,010011,101010,010101,110001,100011,101001,100101.111100,011110,001111,111010,011101,110110,011011,101110,010111,111001,110011,100111,110101,101101,101011.111110,011111,111101,111011,110111,101111.111111
+Concatenating the individual bitstrings matches the bitstream
+```
+
+We want to print that out a bit more nicely:
+
+- `python print_combs_gen_pos_to_bintoggle.py | grep "\." | tr '.' '\n' | sed 's/,/, /g' | btickblock - --stdout`
+
+```STDOUT
+100000, 010000, 001000, 000100, 000010, 000001
+110000, 011000, 001100, 000110, 000011, 101000, 010100, 001010, 000101, 100100, 010010, 001001, 100010, 010001, 100001
+111000, 011100, 001110, 000111, 110100, 011010, 001101, 101100, 010110, 001011, 110010, 011001, 100110, 010011, 101010, 010101, 110001, 100011, 101001, 100101
+111100, 011110, 001111, 111010, 011101, 110110, 011011, 101110, 010111, 111001, 110011, 100111, 110101, 101101, 101011
+111110, 011111, 111101, 111011, 110111, 101111
+111111
+```
+
+- There's something quite strange about this sequence: specifically with the first term of each
+  line. There's a run of zeroes that pad out the right hand side of the significant digit (the digit
+  one) in `100000`, and these zeroes steadily fill left to right until all are `1`.
+- This is more reminiscent of a descent than an ascent: in a descent the significant digits are
+  whittled away from the left leaving the lower values on the right.
+
+If we take the complement (as suggested just above) then this is exactly what we get.
+
+- `python print_combs_gen_pos_to_bintoggle.py | grep "\." | tr '.' '\n' | sed 's/,/, /g' | tr '01' '10' | btickblock - --stdout`
+
+```STDOUT
+011111, 101111, 110111, 111011, 111101, 111110
+001111, 100111, 110011, 111001, 111100, 010111, 101011, 110101, 111010, 011011, 101101, 110110, 011101, 101110, 011110
+000111, 100011, 110001, 111000, 001011, 100101, 110010, 010011, 101001, 110100, 001101, 100110, 011001, 101100, 010101, 101010, 001110, 011100, 010110, 011010
+000011, 100001, 110000, 000101, 100010, 001001, 100100, 010001, 101000, 000110, 001100, 011000, 001010, 010010, 010100
+000001, 100000, 000010, 000100, 001000, 010000
+000000
+```
+
+This looks much more natural!
+
+---
+
+Don't forget TODO items plz!
+
+(Go back and do TODO code a few paragraphs above plz)
+
