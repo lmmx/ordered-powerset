@@ -1344,6 +1344,24 @@ Dividing these counts by the number of rearrangements of the partitions they cou
 This sequence is a partition of 13, so the question to answer is: what combinatorial
 tool produces 13 for the parameters `n=6, r=3`?
 
+We don't need to look far, in fact all we need is to spot the pattern by taking the
+product of the (difference of `n` and the sum of the partition) × (multinomial coeff.)
+
+To take an example, the first partition is `[1,1]`, the sum of which is 2:
+
+- `n=6`, so `6-2=4`, and the multinomial coeff. of `1,1` is `1` so `4×1=4`
+
+Similarly:
+
+- `6-(2+1)=3` so the product with the multinomial coeff (2) = `3×2=6`
+- `6-(3+1)=2` so the product with the multinomial coeff (2) = `2×2=4`
+- `6-(2+2)=2` so the product with the multinomial coeff (1) = `2×1=2`
+- `6-(4+1)=1` so the product with the multinomial coeff (2) = `1×2=2`
+- `6-(3+2)=1` so the product with the multinomial coeff (2) = `1×2=2`
+
+...and we have successfully recovered the sequence `4,6,4,2,2,2` which we observed
+when counting the partitions, which means we can now generate the powerset sequence!
+
 ---
 
 Don't forget TODO items plz!
