@@ -1133,6 +1133,130 @@ placed to the right of the distance tuples):
   - d = `(1,1,1)`: `1111`
 
 
+---
+
+A change of tack: if we write out the sequence of subsets (the powerset of all combinations)
+as above, but rather than any of the previous representations, we let the 'present' items
+be represented by a sequence of their indices in ascending order, followed by a descending sequence
+(modulo n) of the indices of the remaining items (i.e. the absent items), then we get a
+representation of the powerset as a sequence of permutations from the 'descent permutation'
+to the 'ascent permutation' (for n=6 this is from 654321 to 123456).
+
+We can represent the transition from the initial 'descent permutation' to any of the first 6
+by a cyclical shift (a rotation) of the descending subpermutation, and this is clearer if
+written with a vertical bar separating the ascending subsequence on the left (representing
+the present items' indices) from the descending subsequence on the right (representing the
+absent items' indices):
+
+To recap, the first few are:
+
+```
+0: 
+1: 1
+2: 2
+3: 3
+4: 4
+5: 5
+6: 6
+...
+```
+
+which become the following as permutations:
+
+```
+0: 654321
+1: 1|65432
+2: 2|16543
+3: 3|21654
+4: 4|32165
+5: 5|43216
+6: 6|54321
+...
+```
+
+You could write the `0` permutation with a vertical bar but it doesn't seem right to me,
+as there's nothing on the left to separate it from.
+
+The `0` permutation (i.e. the "descent permutation") is the "seed" or "initial" or "base"
+permutation from which every other permutation (representing the powerset, i.e. every other
+subset including the full or "input set" or "identity set") is reached.
+
+This makes intuitive sense as the empty set is indeed the only way to 'reach' the rest of the
+subsets by adding other items from the input set, and to speak of "a sequence of rotations"
+to build up each subset equates to "a sequence of individual set element additions".
+
+One of the nice things about this representation is that the language of cyclical shifts
+reproduces in a single statistic (the sequence of shifts) both the offset and the inter-index
+distance, and it's clear how to 'reach' subsequent permutations by their composite permutations.
+
+What I mean by this is perhaps best illustrated by a simple example: for the six letters "abcdef",
+the word "bef" is represented by the indices `256`, and as a permutation by:
+
+```
+35: 256|431
+```
+
+...where the `431` descending subpermutation indicates the letters `{d,c,a}` are not in the word
+"bef".
+
+The sequence of shifts to reach the above permutation are:
+
+```
+   2°     3°      1°
+0 ---> 2 ---> 17 ---> 35
+```
+
+where `2° ---> 3° ---> 1°` means "double, triple, single" and refers to the number of positions
+by which the individual rotations shift the descending subsequence (a.k.a. descending
+subpermutation) between each permutation (starting at `0`, then double-shifted to `2`, then
+triple-shifted to `17`, then single-shifted to `35`).
+
+That 'path' of permutations written out in full is:
+
+```
+0:  654321
+            (2°)
+2:  2|16543
+            (3°)
+17: 25|4316
+            (1°)
+35: 256|431
+```
+
+- Notice that you can 'read' a `i°` shift as "take the `i`'th value from the rightmost end and
+  place it on the right end of the ascending subpermutation before the `|`.
+
+Now to see the 'nice' aspect of this representation, notice that the sequence `2°,3°,1°` contains
+first the number `2` (the 'offset' of the letter "b" which starts the word "bef") and then
+the following numbers `3,1` are the inter-letter distances between `{ {b,e}, {e,f} }`.
+
+In other words, this representation makes it 'simpler' to track these two distinct features,
+and we can think of them as 'really' just being the relation of any given subset to the
+'seed' permutation of the input set. So it makes it easier to think about inputs and outputs.
+
+One thing that enumerating this helped me to do was to consider the problem of counting:
+
+- the number of distinct partitions (such as `3,1`, the inter-index distances) which are
+  the same for words like "ade" and "bef"
+- the number of times each distinct partition appears (the partition `3,1` appears twice
+  for `n=6` items: "ade" and "bef").
+
+This requires two combinatorial tools:
+
+- [integer partitions](https://en.wikipedia.org/wiki/Partition_(number_theory))
+  - implemented very nicely in
+    [Sage](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/partition.html#sage.combinat.partition.Partitions)
+- the q-[multinomial
+  coefficient](https://en.wikipedia.org/wiki/Multinomial_theorem#Multinomial_coefficients) as we are looking at permutations of a multiset, but we are
+  also looking at sequences of these (and combinatorial
+[q-analogues](https://en.wikipedia.org/wiki/Gaussian_binomial_coefficient) helpfully use q-integers)
+  - a q-integer is a polynomial whose coefficients are all one, so the q-integer analogue of `3` is a polynomial with
+    coefficients `1,1,1`, i.e. `q²+q+1`. It's a sort of vector or 'sequence version' of an integer.
+  - also implemented very nicely in
+    [Sage](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/q_analogues.html#sage.combinat.q_analogues.q_multinomial)
+
+OK maybe that's 3 combinatorial tools, but the role of the q-analogue seems somewhat less central
+here than the multinomial coefficient it 'vectorises'.
 
 ---
 
