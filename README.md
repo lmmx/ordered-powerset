@@ -1255,8 +1255,10 @@ See code at [`sage/partition_counts.py`](partitions/sage_partitions.py)).
 
 From this, we can get the correct sequence of partitions:
 
-- Sage: `c = comb_partitions(6)`
-
+```py
+c = comb_partitions(6)`
+```
+⇣
 ```STDOUT
 r: r_partitions
 1: [[]]
