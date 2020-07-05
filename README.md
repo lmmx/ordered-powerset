@@ -1256,7 +1256,93 @@ This requires two combinatorial tools:
     [Sage](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/q_analogues.html#sage.combinat.q_analogues.q_multinomial)
 
 OK maybe that's 3 combinatorial tools, but the role of the q-analogue seems somewhat less central
-here than the multinomial coefficient it 'vectorises'.
+here than the multinomial coefficient it 'vectorises'. (May not be needed)
+
+After trying this out, the q-analogues may not be needed, but I still used them in the code (see
+[`partitions/sage_partitions.py`](partitions/sage_partitions.py)).
+
+From this, we can get the correct sequence of partitions:
+
+- Sage: `c = comb_partitions(6)`
+
+```STDOUT
+r: r_partitions
+1: [[]]
+2: [[1], [2], [3], [4], [5]]
+3: [[1, 1], [2, 1], [3, 1], [2, 2], [4, 1], [3, 2]]
+4: [[1, 1, 1], [2, 1, 1], [3, 1, 1], [2, 2, 1]]
+5: [[1, 1, 1, 1], [2, 1, 1, 1]]
+6: [[1, 1, 1, 1, 1]]
+```
+
+This correctly shows the partitions for `n=6, r=3` are:
+
+- `[1, 1], [2, 1], [3, 1], [2, 2], [4, 1], [3, 2]`
+
+and what's more, we can obtain the multinomial coefficient for each of
+these partitions, taking the counts of each partition as a multiset
+(e.g. the partition of `5` as `3,1,1` has counts of `1,2` (because there
+is one 3 and two 1s).
+
+We can show these as 'summed' or q-integers (the q-integers are just
+all-1 partitions so not very useful, it just provides a quick readymade
+and equivalent way to do a multinomial coefficient in Python).
+
+- Sage: `cc = comb_partition_counts(6, summed=True)`
+
+```STDOUT
+r: r_partition_counts
+1: []
+2: [1, 1, 1, 1, 1]
+3: [1, 2, 2, 1, 2, 2]
+4: [1, 3, 3, 3]
+5: [1, 4]
+6: [1]
+```
+
+- Sage: `cc = comb_partition_counts(6, summed=False)`
+
+```STDOUT
+r: r_partition_counts
+1: []
+2: [[1], [1], [1], [1], [1]]
+3: [[1], [1, 1], [1, 1], [1], [1, 1], [1, 1]]
+4: [[1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+5: [[1], [1, 1, 1, 1]]
+6: [[1]]
+```
+
+What this shows is that the same partitions for `n=6, r=3`:
+
+- `[1, 1], [2, 1], [3, 1], [2, 2], [4, 1], [3, 2]`
+
+...have this many distinct rearrangements, respectively:
+
+- `1, 2, 2, 1, 2, 2`
+
+...which if you look at the lists, it simply means that those partitions
+which are multisets of only one integer (e.g. `1,1`) will have one rearrangement,
+and those which are multisets of two integers (e.g. `2,1`) will have two rearrangements
+(namely one ascending and one descending arrangement).
+
+This will obviously not be so simple for higher values of `r`, but let's focus only on
+`n=6, r=3` for now.
+
+Having established the expected number of rearrangements for the partitions, we should
+compare that to the actual number of sequences we see.
+
+The counts for `[1, 1], [2, 1], [3, 1], [2, 2], [4, 1], [3, 2]` are:
+
+- `4,6,4,2,2,2`
+
+These counts form a partition of 20, which is of course the binomial coefficient (6,3).
+
+Dividing these counts by the number of rearrangements of the partitions they count, gives
+
+- `4,3,2,2,1,1`
+
+This sequence is a partition of 13, so the question to answer is: what combinatorial
+tool produces 13 for the parameters `n=6, r=3`?
 
 ---
 
