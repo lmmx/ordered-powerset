@@ -891,14 +891,48 @@ for n in range(1, max_n + zero_run_offset):
 
 The next difference is that we shouldn't have:
 - `01 (3)` we should skip it to get `10 (3)`
-- `001 (6)` we should skip it, and skip `010` then take `011 (5)`
-  - The index is decremented to 5 since we already skipped `01`
+- `001 (6)` we should skip it, and skip `010` then take `011 (6)`
 
 ...and if we take these out in our loop...
 
-- `TODO`
+```py
+max_n = 8
+zero_run_offset = 2
+zero_offset_count = 0
+seen_bitlen_count = 0
+for n in range(1, max_n + zero_run_offset):
+    bs = bit_strings.bitstream_ins(n=n, lencode=True).bin
+    new_bitstring = bs[seen_bitlen_count:]
+    seen_bitlen_count += len(new_bitstring)
+    if len(new_bitstring) > 1 and '1' not in new_bitstring:
+        zero_offset_count += 1
+        continue
+    print(new_bitstring, f"({n - zero_offset_count})")
+```
+⇣
+```STDOUT
+0 (1)
+1 (2)
+10 (3)
+11 (4)
+001 (5)
+011 (6)
+100 (7)
+```
 
-...so we get there in the end, but it's pretty clear that **this sequence
+Is still not right compared to the above abridged
+
+> 0:    ... (1)
+> 1:    ... (2)
+> 10:   ... (3)
+> 11:   ... (4)
+> 011:  ... (5)
+> 110:  ... (6)
+> 101:  ... (7)
+> 111:  ... (8)
+
+...we might get to `110` by adding new rules to skip values in the sequence, but since there's then
+a 'decrement' from `110` to `101`, it's pretty clear that **this sequence
 is not 'lencoded'**. To say more precisely what this sequence is, let's
 restate what 'lencoded' really means.
 
@@ -1051,6 +1085,54 @@ If we take the complement (as suggested just above) then this is exactly what we
 ```
 
 This looks much more natural!
+
+Next we should compare these binary values to the binary codewords obtained as the complement of the
+lencoded integers (which will be used as if they were the lencoded integers, i.e. they count as
+the value of their complement still).
+
+This is a mouthful: let's call the binary codewords obtained as the complement of the lencoded
+integers the "antilencoded integers", and where we symbolised the lencoded integers by
+
+> `{0,1}⁺⁺ⁿ` = `⋃ { {0,1}ⁱ }` for all `i ∊ range(1, n+1)`
+
+Let's symbolise the antilencoded integers by
+
+`{1,0}ⁿ⁻⁻` = `⋃ { {1,0}ⁱ }` for all `i ∊ range(n, 0)`
+
+The awkward `+1` has dropped out of the range (though if we want to include the empty subset
+trivial combination then this time we need to change it to `range(n, -1)`).
+
+So to get an idea of these, let's reuse the list above of the first few antilencoded integers
+
+```
+0 (1) 1
+1 (2) 0
+01 (3) 10
+10 (4) 01
+11 (5) 00
+001 (6) 110
+010 (7) 101
+```
+
+...but let's continue them later.
+
+To return to our distance tuples encoded in binary, arranged by sum (of the 4-length bitstrings
+placed to the right of the distance tuples):
+
+- Sum 1:
+  - d = `(0)`: `1000,0100,0010,0001`
+- Sum 2:
+  - d = `(1)`: `1100,0110,0011`
+  - d = `(10)`: `1010,0101`
+  - d = `(11)`: `1001`
+- Sum 3:
+  - d = `(1,1)`: `1110,0111`
+  - d = `(1,10)`: `1101`
+  - d = `(10,1)`: `1011` **!!!**
+- Sum 4:
+  - d = `(1,1,1)`: `1111`
+
+
 
 ---
 
