@@ -28,6 +28,12 @@ def asc_int_partitions(n):
         y = x + y - 1
         yield tuple(a[:k + 1])
 
+# Modified
+def asc_int_partitions_by_length(n):
+    r_partitions = {}
+    for p in asc_int_partitions(n):
+        l = len(p)
+
 # https://stackoverflow.com/a/6285330/2668831
 def uniquely_permute(iterable, enforce_sort=False, r=None):
     previous = tuple()

@@ -1251,7 +1251,7 @@ This requires two combinatorial tools:
   - see:
     [`sage.arith.misc.multinomial`](https://doc.sagemath.org/html/en/reference/rings_standard/sage/arith/misc.html#sage.arith.misc.multinomial)
 
-See code at [`partitions/sage_partitions.py`](partitions/sage_partitions.py)).
+See code at [`sage/partition_counts.py`](partitions/sage_partitions.py)).
 
 From this, we can get the correct sequence of partitions:
 
@@ -1276,10 +1276,10 @@ these partitions, taking the counts of each partition as a multiset
 (e.g. the partition of `5` as `3,1,1` has counts of `1,2` (because there
 is one 3 and two 1s).
 
-- Sage: `cc = comb_partition_counts(6)`
+- Sage: `cc = comb_partition_multinom_coeffs(6)`
 
 ```STDOUT
-r: r_partition_counts
+r: r_partition_multinom_coeffs
 1: []
 2: [1, 1, 1, 1, 1]
 3: [1, 2, 2, 1, 2, 2]
@@ -1342,6 +1342,51 @@ Similarly:
 ..._et voilà_ we have successfully recovered the sequence `4,6,4,2,2,2` which we observed
 when counting the partitions, which means we can now count the partitions for any `(r,n)`
 and therefore generate any powerset sequence!
+
+- Sage: `c = comb_partitions(6)`
+
+```STDOUT
+r: r_partitions
+1: [[]]
+2: [[1], [2], [3], [4], [5]]
+3: [[1, 1], [2, 1], [3, 1], [2, 2], [4, 1], [3, 2]]
+4: [[1, 1, 1], [2, 1, 1], [3, 1, 1], [2, 2, 1]]
+5: [[1, 1, 1, 1], [2, 1, 1, 1]]
+6: [[1, 1, 1, 1, 1]]
+```
+
+- Sage: `cc = comb_partition_counts(6)`
+
+```STDOUT
+r: r_partition_counts
+1: []
+2: [(5, 1), (4, 1), (3, 1), (2, 1), (1, 1)]
+3: [(4, 1), (3, 2), (2, 2), (2, 1), (1, 2), (1, 2)]
+4: [(3, 1), (2, 3), (1, 3), (1, 3)]
+5: [(2, 1), (1, 4)]
+6: [(1, 1)]
+```
+
+This can be read by taking the partition from the `comb_partitions` output
+and then matching to the same row/list position in the output of `comb_partition_counts`,
+which is a tuple of:
+
+- number of times each rearrangement of that partition is seen
+- number of rearrangements of that partition
+
+E.g. for `n=6, r=5`:
+
+```
+5: [[1, 1, 1, 1], [2, 1, 1, 1]]
+5: [(2, 1), (1, 4)]
+```
+
+means:
+
+- `1,1,1,1` twice, in one rearrangement
+- `2,1,1,1` once, in four rearrangements
+
+A convenience function can do this operation for a given `(n,r)`.
 
 ---
 
