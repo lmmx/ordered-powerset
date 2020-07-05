@@ -15,23 +15,22 @@ def comb_partitions(n, verbose=True):
             print(f"{k+1}:", v)
     return list(r_partitions.values())
 
+# Deprecate for Sage multinomial function
 def multiset_perms(k_counts):
+    "Simple multinomial coefficient using standard lib `math` functions"
     n_factorial = factorial(sum(k_counts))
     k_count_factorial_prod = prod([factorial(x) for x in k_counts])
     n_perms = n_factorial/k_count_factorial_prod
-    return n_perms
+    return int(n_perms)
 
-def comb_partition_counts(n, summed=False, verbose=True):
+def comb_partition_counts(n, verbose=True):
     if verbose:
         print(f"r:", "r_partition_counts")
     comb_pp = comb_partitions(n, verbose=False)
     partition_path_counts = {}
     for i, p_list in enumerate(comb_pp):
         kc_list = [[p.count(x) for x in set(p)] for p in p_list]
-        q_multinoms = [q_multinomial(kcounts) for kcounts in kc_list]
-        q_multinoms = [q if type(q) is sage.rings.integer.Integer else q.coefficients() for q in q_multinoms]
-        if summed:
-            q_multinoms = [sum(q) if type(q) is list else q for q in q_multinoms]
+        q_multinoms = [multinomial(kcounts) for kcounts in kc_list]
         partition_path_counts.update({i: q_multinoms})
     empty_set = {0: []}
     partition_path_counts.update(empty_set)

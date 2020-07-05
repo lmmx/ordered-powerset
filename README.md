@@ -1246,20 +1246,12 @@ This requires two combinatorial tools:
 - [integer partitions](https://en.wikipedia.org/wiki/Partition_(number_theory))
   - implemented very nicely in
     [Sage](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/partition.html#sage.combinat.partition.Partitions)
-- the q-[multinomial
-  coefficient](https://en.wikipedia.org/wiki/Multinomial_theorem#Multinomial_coefficients) as we are looking at permutations of a multiset, but we are
-  also looking at sequences of these (and combinatorial
-[q-analogues](https://en.wikipedia.org/wiki/Gaussian_binomial_coefficient) helpfully use q-integers)
-  - a q-integer is a polynomial whose coefficients are all one, so the q-integer analogue of `3` is a polynomial with
-    coefficients `1,1,1`, i.e. `q²+q+1`. It's a sort of vector or 'sequence version' of an integer.
-  - also implemented very nicely in
-    [Sage](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/q_analogues.html#sage.combinat.q_analogues.q_multinomial)
+- the [multinomial coefficient](https://en.wikipedia.org/wiki/Multinomial_theorem#Multinomial_coefficients)
+  as we want to know the number of permutations of a multiset
+  - see:
+    [`sage.arith.misc.multinomial`](https://doc.sagemath.org/html/en/reference/rings_standard/sage/arith/misc.html#sage.arith.misc.multinomial)
 
-OK maybe that's 3 combinatorial tools, but the role of the q-analogue seems somewhat less central
-here than the multinomial coefficient it 'vectorises'. (May not be needed)
-
-After trying this out, the q-analogues may not be needed, but I still used them in the code (see
-[`partitions/sage_partitions.py`](partitions/sage_partitions.py)).
+See code at [`partitions/sage_partitions.py`](partitions/sage_partitions.py)).
 
 From this, we can get the correct sequence of partitions:
 
@@ -1284,11 +1276,7 @@ these partitions, taking the counts of each partition as a multiset
 (e.g. the partition of `5` as `3,1,1` has counts of `1,2` (because there
 is one 3 and two 1s).
 
-We can show these as 'summed' or q-integers (the q-integers are just
-all-1 partitions so not very useful, it just provides a quick readymade
-and equivalent way to do a multinomial coefficient in Python).
-
-- Sage: `cc = comb_partition_counts(6, summed=True)`
+- Sage: `cc = comb_partition_counts(6)`
 
 ```STDOUT
 r: r_partition_counts
@@ -1298,18 +1286,6 @@ r: r_partition_counts
 4: [1, 3, 3, 3]
 5: [1, 4]
 6: [1]
-```
-
-- Sage: `cc = comb_partition_counts(6, summed=False)`
-
-```STDOUT
-r: r_partition_counts
-1: []
-2: [[1], [1], [1], [1], [1]]
-3: [[1], [1, 1], [1, 1], [1], [1, 1], [1, 1]]
-4: [[1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
-5: [[1], [1, 1, 1, 1]]
-6: [[1]]
 ```
 
 What this shows is that the same partitions for `n=6, r=3`:
@@ -1325,8 +1301,8 @@ which are multisets of only one integer (e.g. `1,1`) will have one rearrangement
 and those which are multisets of two integers (e.g. `2,1`) will have two rearrangements
 (namely one ascending and one descending arrangement).
 
-This will obviously not be so simple for higher values of `r`, but let's focus only on
-`n=6, r=3` for now.
+- This will obviously not be so simple for higher values of `r`, but let's focus only on
+  `n=6, r=3` to introduce the ideas.
 
 Having established the expected number of rearrangements for the partitions, we should
 compare that to the actual number of sequences we see.
@@ -1341,11 +1317,15 @@ Dividing these counts by the number of rearrangements of the partitions they cou
 
 - `4,3,2,2,1,1`
 
-This sequence is a partition of 13, so the question to answer is: what combinatorial
-tool produces 13 for the parameters `n=6, r=3`?
+This sequence is a partition of 13, so the question to answer is: how do we form this
+partition of 13 from only the parameters `n=6, r=3`?
 
-We don't need to look far, in fact all we need is to spot the pattern by taking the
-product of the (difference of `n` and the sum of the partition) × (multinomial coeff.)
+- The answer is it's the difference of `n` and the sum of each partition
+
+This means we just need to take the product of the (difference of `n` and the sum of
+each partition) × (multinomial coefficient for each partition)
+
+- This is easier to spot if you write all the sequences out on paper.
 
 To take an example, the first partition is `[1,1]`, the sum of which is 2:
 
@@ -1359,8 +1339,9 @@ Similarly:
 - `6-(4+1)=1` so the product with the multinomial coeff (2) = `1×2=2`
 - `6-(3+2)=1` so the product with the multinomial coeff (2) = `1×2=2`
 
-...and we have successfully recovered the sequence `4,6,4,2,2,2` which we observed
-when counting the partitions, which means we can now generate the powerset sequence!
+..._et voilà_ we have successfully recovered the sequence `4,6,4,2,2,2` which we observed
+when counting the partitions, which means we can now count the partitions for any `(r,n)`
+and therefore generate any powerset sequence!
 
 ---
 
