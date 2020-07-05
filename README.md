@@ -1362,8 +1362,10 @@ r: r_partitions
 6: [[1, 1, 1, 1, 1]]
 ```
 
-- Sage: `cc = comb_partition_counts(6)`
-
+```py
+cc = comb_partition_counts(6)
+```
+⇣
 ```STDOUT
 r: r_partition_counts
 1: []
