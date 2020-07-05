@@ -1276,7 +1276,10 @@ these partitions, taking the counts of each partition as a multiset
 (e.g. the partition of `5` as `3,1,1` has counts of `1,2` (because there
 is one 3 and two 1s).
 
-- Sage: `cc = comb_partition_multinom_coeffs(6)`
+```py
+cc = comb_partition_multinom_coeffs(6)
+```
+⇣
 
 ```STDOUT
 r: r_partition_multinom_coeffs
@@ -1343,8 +1346,10 @@ Similarly:
 when counting the partitions, which means we can now count the partitions for any `(r,n)`
 and therefore generate any powerset sequence!
 
-- Sage: `c = comb_partitions(6)`
-
+```py
+c = comb_partitions(6)`
+```
+⇣
 ```STDOUT
 r: r_partitions
 1: [[]]
@@ -1387,6 +1392,37 @@ means:
 - `2,1,1,1` once, in four rearrangements
 
 A convenience function can do this operation for a given `(n,r)`.
+
+```py
+comb_partition_counts(6, multiplied=True)
+```
+⇣
+```STDOUT
+r: r_partition_counts
+1: []
+2: [5, 4, 3, 2, 1]
+3: [4, 6, 4, 2, 2, 2]
+4: [3, 6, 3, 3]
+5: [2, 4]
+6: [1]
+```
+
+...or as repetitions (matching the actual sequence seen)
+
+```py
+comb_partition_counts(6, rep=True)
+```
+⇣
+```STDOUT
+r: r_partition_counts
+1: []
+2: [(5,), (4,), (3,), (2,), (1,)]
+3: [(4,), (3, 3), (2, 2), (2,), (1, 1), (1, 1)]
+4: [(3,), (2, 2, 2), (1, 1, 1), (1, 1, 1)]
+5: [(2,), (1, 1, 1, 1)]
+6: [(1,)]
+```
+
 
 ---
 
